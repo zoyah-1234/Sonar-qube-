@@ -1,2 +1,42 @@
 # Sonar-qube-
-sonar-qube quality gate pipeline
+##sonar-qube quality gate pipeline
+
+pipeline {
+    agent any
+
+    stages {
+         stage('clone') {
+            steps {
+               git 'https://github.com/cloudmaster2025/sonar.git' 
+            }
+        }
+       stage('build') {
+            steps {
+                sh ' sudo yum install maven -y '
+                sh  'mvn clean package' 
+            }
+        }
+       stage('test') {
+            steps
+            withSonarQubeEnv(installationName: 'sonar', credentialsId: 'z9') {
+            sh 'mvn clean verify sonar:sonar \
+  -Dsonar.projectKey=myapp'
+}
+            }
+        }
+       stage('QG') {
+            steps {
+               timeout(time: 90, unit: 'SECONDS') {
+            waitForQualityGate abortPipeline: false, credentialsId: 'z9'
+}
+            }
+        }
+       stage('deploy') {
+            steps {
+               deploy adapters: [tomcat9(credentialsId: 'zh', path: '', url: 'http://3.112.45.162:8080/')], contextPath: '/', war: '**/*.war' 
+            }
+        }
+       
+     
+    }
+}
